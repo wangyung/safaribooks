@@ -16,7 +16,9 @@ from random import random
 from lxml import html, etree
 from multiprocessing import Process, Queue, Value
 from urllib.parse import urljoin, urlparse, parse_qs, quote_plus
-
+import concurrent.futures
+import asyncio
+import time
 
 PATH = os.path.dirname(os.path.realpath(__file__))
 COOKIES_FILE = os.path.join(PATH, "cookies.json")
@@ -323,6 +325,10 @@ class SafariBooks:
 
         self.jwt = {}
 
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=25)
+        self.loop = asyncio.get_event_loop()
+        self.connection_futures = []
+
         if not args.cred:
             if not os.path.isfile(COOKIES_FILE):
                 self.display.exit("Login: unable to find `cookies.json` file.\n"
@@ -380,6 +386,8 @@ class SafariBooks:
 
         self.cover = False
         self.get()
+        # get async
+        # self.loop.run_until_complete(self.get_async())
         if not self.cover:
             self.cover = self.get_default_cover()
             cover_html = self.parse_html(
@@ -397,9 +405,13 @@ class SafariBooks:
         self.css_done_queue = Queue(0) if "win" not in sys.platform else WinQueue()
         self.display.info("Downloading book CSSs... (%s files)" % len(self.css), state=True)
         self.collect_css()
+        # self.collect_css()
+        self.loop.run_until_complete(self.collect_css_async())
         self.images_done_queue = Queue(0) if "win" not in sys.platform else WinQueue()
         self.display.info("Downloading book images... (%s files)" % len(self.images), state=True)
-        self.collect_images()
+        #self.collect_images()
+        self.loop.run_until_complete(self.collect_images_async())
+        # self.collect_images()
 
         self.display.info("Creating EPUB file...", state=True)
         self.create_epub()
@@ -1047,6 +1059,40 @@ class SafariBooks:
 
         shutil.make_archive(zip_file, 'zip', self.BOOK_PATH)
         os.rename(zip_file + ".zip", os.path.join(self.BOOK_PATH, self.book_id) + ".epub")
+
+    def _start_coroutines(self, operation, *args):
+        self.connection_futures.append(
+            self.loop.run_in_executor(self.executor, operation, *args)
+        )
+
+    async def _wait_for_connection_finished(self):
+        await asyncio.gather(*self.connection_futures)
+        self.connection_futures.clear()
+        
+    async def collect_css_async(self):
+        self.display.state_status.value = -1
+        # Use asyncio to download css
+
+        for css_url in self.css:
+            self._start_coroutines(self._thread_download_css, css_url)
+
+        await self._wait_for_connection_finished()
+
+    async def collect_images_async(self):
+        if self.display.book_ad_info == 2:
+            self.display.info("Some of the book contents were already downloaded.\n"
+                              "    If you want to be sure that all the images will be downloaded,\n"
+                              "    please delete the `<BOOK NAME>/OEBPS/*.xhtml` files and restart the program.")
+
+        self.display.state_status.value = -1
+
+        for image_url in self.images:
+            if "xhtml" in image_url:
+                self.display.info("incorrect image format in {}, skipped".format(image_url), False)
+            else:
+                self._start_coroutines(self._thread_download_images, image_url)
+
+        await self._wait_for_connection_finished()
 
 
 # MAIN
