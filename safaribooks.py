@@ -365,9 +365,14 @@ class SafariBooks:
         self.clean_book_title = "".join(self.escape_dirname(self.book_title).split(",")[:2]) \
                                 + " ({0})".format(self.book_id)
 
-        books_dir = os.path.join(PATH, "Books")
+        if not self.args.output:
+            output_folder = PATH
+        else :
+            output_folder = self.args.output
+        books_dir = os.path.join(output_folder, "SafariBooks")
+
         if not os.path.isdir(books_dir):
-            os.mkdir(books_dir)
+            os.makedirs(books_dir)
 
         self.BOOK_PATH = os.path.join(books_dir, self.clean_book_title)
         self.display.set_output_dir(self.BOOK_PATH)
@@ -1127,6 +1132,11 @@ if __name__ == "__main__":
         "--preserve-log", dest="log", action='store_true', help="Leave the `info_XXXXXXXXXXXXX.log`"
                                                                 " file even if there isn't any error."
     )
+
+    arguments.add_argument(
+        "-o", dest="output", help="output folder."
+    )
+
     arguments.add_argument("--help", action="help", default=argparse.SUPPRESS, help='Show this help message.')
     arguments.add_argument(
         "bookid", metavar='<BOOK ID>',
