@@ -119,8 +119,8 @@ class Display:
 
         if self.output_dir_set:
             output = (self.SH_YELLOW + "[+]" + self.SH_DEFAULT +
-                      " Please delete the output directory '" + self.output_dir + "'"
-                      " and restart the program.")
+                      " Deleting the output directory '" + self.output_dir)
+            shutil.rmtree(self.output_dir, ignore_errors=True)
             self.out(output)
 
         output = self.SH_BG_RED + "[!]" + self.SH_DEFAULT + " Aborting..."
