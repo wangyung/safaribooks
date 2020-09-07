@@ -21,7 +21,10 @@ import asyncio
 import time
 
 PATH = os.path.dirname(os.path.realpath(__file__))
-COOKIES_FILE = os.path.join(PATH, "cookies.json")
+TMP_PATH = os.path.join(PATH, "tmp")
+
+if not os.path.isdir(TMP_PATH):
+    os.mkdir(TMP_PATH)
 
 ORLY_BASE_HOST = "oreilly.com"  # PLEASE INSERT URL HERE
 
@@ -52,7 +55,7 @@ class Display:
     def __init__(self, log_file):
         self.output_dir = ""
         self.output_dir_set = False
-        self.log_file = os.path.join(PATH, log_file)
+        self.log_file = os.path.join(TMP_PATH, log_file)
 
         self.logger = logging.getLogger("SafariBooks")
         self.logger.setLevel(logging.INFO)
@@ -316,6 +319,14 @@ class SafariBooks:
         self.display = Display("info_%s.log" % escape(args.bookid))
         self.display.intro()
 
+        if not self.args.output:
+            self.output_folder = PATH
+        else :
+            self.output_folder = self.args.output
+        
+        # Set the cookies.json to output file
+        COOKIES_FILE = os.path.join(self.output_folder, "cookies.json")
+
         self.session = requests.Session()
         if USE_PROXY:  # DEBUG
             self.session.proxies = PROXIES
@@ -365,16 +376,12 @@ class SafariBooks:
         self.clean_book_title = "".join(self.escape_dirname(self.book_title).split(",")[:2]) \
                                 + " ({0})".format(self.book_id)
 
-        if not self.args.output:
-            output_folder = PATH
-        else :
-            output_folder = self.args.output
-        books_dir = os.path.join(output_folder, "SafariBooks")
+        self.books_dir = os.path.join(TMP_PATH, "SafariBooks")        
 
-        if not os.path.isdir(books_dir):
-            os.makedirs(books_dir)
+        if not os.path.isdir(self.books_dir):
+            os.makedirs(self.books_dir)
 
-        self.BOOK_PATH = os.path.join(books_dir, self.clean_book_title)
+        self.BOOK_PATH = os.path.join(self.books_dir, self.clean_book_title)
         self.display.set_output_dir(self.BOOK_PATH)
         self.css_path = ""
         self.images_path = ""
@@ -1058,12 +1065,15 @@ class SafariBooks:
             self.create_toc().encode("utf-8", "xmlcharrefreplace")
         )
 
-        zip_file = os.path.join(PATH, "Books", self.book_id)
-        if os.path.isfile(zip_file + ".zip"):
-            os.remove(zip_file + ".zip")
+        zip_file_basename = os.path.join(TMP_PATH, "Books", self.book_id)
+        zip_file = zip_file_basename + ".zip"
+        if os.path.isfile(zip_file):
+            os.remove(zip_file)
 
-        shutil.make_archive(zip_file, 'zip', self.BOOK_PATH)
-        os.rename(zip_file + ".zip", os.path.join(self.BOOK_PATH, self.book_title) + ".epub")
+        book_filename = os.path.join(TMP_PATH, self.book_title) + ".epub"
+        shutil.make_archive(zip_file_basename, 'zip', self.BOOK_PATH)
+        os.rename(zip_file, book_filename)
+        shutil.move(book_filename, self.output_folder)
 
     def _start_coroutines(self, operation, *args):
         self.connection_futures.append(
