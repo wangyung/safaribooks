@@ -41,6 +41,15 @@ $ python3 safaribooks.py --cred "account_mail@mail.com:password01" XXXXXXXXXXXXX
 The ID is the digits that you find in the URL of the book description page:  
 `https://www.safaribooksonline.com/library/view/book-name/XXXXXXXXXXXXX/`  
 Like: `https://www.safaribooksonline.com/library/view/test-driven-development-with/9781491958698/`  
+
+### Using Docker
+1. Build the docker image
+1. Add the `downloads.list` file in the share folder. Each line would be the book id.
+1. Create and run the container by the command   
+
+   ```
+   docker run --name safaribooks -it --tmpfs /app/safaribooks/tmp -v [SHARE_FOLDER]:/app/safaribooks/share safaribooks:latest
+   ``` 
   
 #### Program options:
 ```shell
