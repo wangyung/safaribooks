@@ -358,7 +358,8 @@ class SafariBooks:
         self.book_id = args.bookid
         self.api_url = self.API_TEMPLATE.format(self.book_id)
 
-        self.display.info("Retrieving book info...")
+        self.book_id = self.book_id.replace("\r", "")
+        self.display.info("Retrieving book info from id {}".format(self.book_id))
         self.book_info = self.get_book_info()
         self.display.book_info(self.book_info)
 

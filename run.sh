@@ -11,13 +11,17 @@ fi
 KEEP=""
 
 for book_id in $(cat $DOWNLOAD_LIST); do
+
+  if [ -z $book_id ]; then
+    continue
+  fi
   
   #Check cookies.json
   if [ -f "share/cookies.json" ]; then
     echo "Find cookies, use cookie to login "
-    python3 safaribooks.py $book_id -o $OUTPUT
+    python3 safaribooks.py -o $OUTPUT $book_id
   else
-    python3 safaribooks.py --login $book_id -o $OUTPUT
+    python3 safaribooks.py --login -o $OUTPUT $book_id
   fi 
 
   # Keep the book id when error occurs.
@@ -26,7 +30,7 @@ for book_id in $(cat $DOWNLOAD_LIST); do
     if [ -z $KEEP ]; then
       KEEP="$book_id"
     else
-      KEEP=$(echo "$KEEP\n$book_id")
+      KEEP=$(echo -e "$KEEP\n$book_id")
     fi
   fi  
 done
